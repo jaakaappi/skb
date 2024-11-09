@@ -28,7 +28,6 @@ export const useFetch = <T>(url: string, config: AxiosRequestConfig) => {
 
   useEffect(() => {
     fetch();
-    console.log("fetch");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
