@@ -94,7 +94,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    bestStoriesIds?.slice(0, 10)?.map(async (id) => {
+    bestStoriesIds?.map(async (id) => {
       setStories((previousStories) => ({
         ...previousStories,
         [id]: { id, loading: true },
