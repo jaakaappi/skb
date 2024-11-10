@@ -4,6 +4,8 @@ import { useFetch } from "./useFetch";
 import axios from "axios";
 import { StoryCard } from "./StoryCard";
 import iconUrl from "./assets/icon.png";
+import gearUrl from "./assets/gear.png";
+import { Settings } from "./Settings";
 
 export interface Item {
   by?: string;
@@ -24,9 +26,15 @@ export interface Story {
   story?: Item;
 }
 
-const badPartialWords = ["large language model", "llm", "genai", "openai"];
+const initialBadPartialWords = [
+  "large language model",
+  "llm",
+  "genai",
+  "openai",
+  "machine learning",
+];
 
-// const badSingleWords = ["ai", "llm"];
+const initialBadWholeWords = ["ai", "llm"];
 
 const urls = {
   top: "https://hacker-news.firebaseio.com/v0/topstories.json",
@@ -38,6 +46,13 @@ const App = () => {
   const [selectedUrl, setSelectedUrl] = useState<"top" | "best" | "new">("top");
   const [stories, setStories] = useState<{ [key: number]: Story }>({});
   const [readStories, setReadStories] = useState<number[]>([]);
+  const [currentPartialWords, setCurrentPartialWords] = useState<string[]>(
+    initialBadPartialWords
+  );
+  const [currentWholeWords, setCurrentWholeWords] =
+    useState<string[]>(initialBadWholeWords);
+
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   const {
     data: bestStoriesIds,
@@ -58,36 +73,52 @@ const App = () => {
         : { stories: [] }
     )["stories"] as Array<number>;
     setReadStories(savedReadStories);
+
+    const savedPartialWords =
+      localStorage.getItem("partialWords")?.split("\n") ?? [];
+    const newPartialWords =
+      savedPartialWords.length === 0
+        ? initialBadPartialWords
+        : savedPartialWords;
+    setCurrentPartialWords(newPartialWords);
+    // save back in case there were no values saved
+    localStorage.setItem("partialWords", newPartialWords.join("\n"));
+
+    const savedWholeWords =
+      localStorage.getItem("wholeWords")?.split("\n") ?? [];
+    const newWholeWords =
+      savedWholeWords.length === 0 ? initialBadWholeWords : savedWholeWords;
+    setCurrentWholeWords(newWholeWords);
+    // save back in case there were no values saved
+    localStorage.setItem("wholeWords", newWholeWords.join("\n"));
   }, []);
 
   useEffect(() => {
-    bestStoriesIds
-      // ?.slice(0, 10)
-      ?.map(async (id) => {
+    bestStoriesIds?.slice(0, 10)?.map(async (id) => {
+      setStories((previousStories) => ({
+        ...previousStories,
+        [id]: { id, loading: true },
+      }));
+
+      try {
+        const response = await axios.get(
+          `https://hacker-news.firebaseio.com/v0/item/${id}.json`
+        );
         setStories((previousStories) => ({
           ...previousStories,
-          [id]: { id, loading: true },
+          [id]: {
+            id,
+            loading: false,
+            story: response.data as unknown as Item,
+          },
         }));
-
-        try {
-          const response = await axios.get(
-            `https://hacker-news.firebaseio.com/v0/item/${id}.json`
-          );
-          setStories((previousStories) => ({
-            ...previousStories,
-            [id]: {
-              id,
-              loading: false,
-              story: response.data as unknown as Item,
-            },
-          }));
-        } catch (error) {
-          setStories((previousStories) => ({
-            ...previousStories,
-            [id]: { id, loading: false, error: error as Error },
-          }));
-        }
-      });
+      } catch (error) {
+        setStories((previousStories) => ({
+          ...previousStories,
+          [id]: { id, loading: false, error: error as Error },
+        }));
+      }
+    });
   }, [bestStoriesIds]);
 
   const handleCardOpened = (id: number) => {
@@ -106,6 +137,27 @@ const App = () => {
     localStorage.setItem("readStories", JSON.stringify(newStories));
   };
 
+  const handleSettingsChanged = (
+    partialWords?: string[],
+    wholeWords?: string[]
+  ) => {
+    setSettingsVisible(false);
+    if (partialWords) {
+      const cleanerPartialWords = partialWords
+        .map((word) => word.trim())
+        .filter((word) => word);
+      setCurrentPartialWords(cleanerPartialWords);
+      localStorage.setItem("wholeWords", cleanerPartialWords.join("\n"));
+    }
+    if (wholeWords) {
+      const cleanerWholeWords = wholeWords
+        .map((word) => word.trim())
+        .filter((word) => word);
+      setCurrentWholeWords(cleanerWholeWords);
+      localStorage.setItem("wholeWords", cleanerWholeWords.join("\n"));
+    }
+  };
+
   return (
     <>
       <div id="titleContainer">
@@ -115,18 +167,33 @@ const App = () => {
           onClick={() => {
             setSelectedUrl("new");
           }}
+          className="hoverCursor"
         >
           {selectedUrl === "new" ? "new" : <b>new</b>}
         </span>
-        <span onClick={() => setSelectedUrl("best")}>
+        <span onClick={() => setSelectedUrl("best")} className="hoverCursor">
           {selectedUrl === "best" ? "best" : <b>best</b>}
         </span>
-        <span onClick={() => setSelectedUrl("top")}>
+        <span onClick={() => setSelectedUrl("top")} className="hoverCursor">
           {selectedUrl === "top" ? "top" : <b>top</b>}
         </span>
+        <img
+          id="titleGearIcon"
+          className="hoverCursor"
+          src={gearUrl}
+          height={24}
+          onClick={() => setSettingsVisible(!settingsVisible)}
+        />
       </div>
+      {settingsVisible && (
+        <Settings
+          onClose={handleSettingsChanged}
+          partialWords={currentPartialWords}
+          wholeWords={currentWholeWords}
+        />
+      )}
       {bestStoriesIdsError ? (
-        bestStoriesIdsError?.message
+        `Error getting story ids: ${bestStoriesIdsError?.message}`
       ) : (
         <div id="storyContainer">
           {bestStoriesIds
@@ -135,10 +202,20 @@ const App = () => {
             )
             .filter(
               (id) =>
-                !badPartialWords.some(
+                !currentPartialWords.some(
                   (word) =>
                     stories[id].story &&
-                    stories[id].story.title?.toLowerCase().includes(word)
+                    stories[id].story.title
+                      ?.toLowerCase()
+                      .includes(word.toLowerCase())
+                ) &&
+                !currentWholeWords.some(
+                  (word) =>
+                    stories[id].story &&
+                    stories[id].story.title
+                      ?.toLowerCase()
+                      .split(" ")
+                      .some((titleWord) => titleWord === word.toLowerCase())
                 )
             )
             .map(

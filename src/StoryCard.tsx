@@ -12,7 +12,7 @@ export const StoryCard = ({ story, onOpened, read }: StoryCardProps) => {
       className={read ? "storyCardContainer visiterCard" : "storyCardContainer"}
     >
       {!story.loading && story.story ? (
-        <div>
+        <>
           <div className="storyCardTitleContainer">
             <a
               href={`https://news.ycombinator.com/item?id=${story.id}`}
@@ -39,7 +39,7 @@ export const StoryCard = ({ story, onOpened, read }: StoryCardProps) => {
               onClick={onOpened}
             >{`${story.story.descendants} comments`}</a>
           </div>
-        </div>
+        </>
       ) : (
         "loading"
       )}
