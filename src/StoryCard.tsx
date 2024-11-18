@@ -7,6 +7,17 @@ type StoryCardProps = {
 };
 
 export const StoryCard = ({ story, onOpened, read }: StoryCardProps) => {
+  const formatTimestamp = (timestamp: number) => {
+    const microsecondTimestamp = timestamp * 1000;
+    const difference = Date.now() - microsecondTimestamp;
+
+    if (difference >= 1000 * 60 * 60 * 24)
+      return `on ${new Date(microsecondTimestamp).toLocaleDateString()}`;
+    else if (difference >= 1000 * 60 * 60)
+      return `${new Date(difference).getHours()} hours ago`;
+    else return `${new Date(difference).getMinutes()} minutes ago`;
+  };
+
   return (
     <div
       className={read ? "storyCardContainer visiterCard" : "storyCardContainer"}
@@ -33,6 +44,9 @@ export const StoryCard = ({ story, onOpened, read }: StoryCardProps) => {
           </div>
           <div className="storyCardInfoContainer">
             <span>{`${story.story.score} points`}</span>
+            {story.story.time && (
+              <span>{`${formatTimestamp(story.story.time)}`}</span>
+            )}
             <a
               href={`https://news.ycombinator.com/item?id=${story.id}`}
               target="_blank"

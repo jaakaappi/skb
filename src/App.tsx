@@ -27,14 +27,20 @@ export interface Story {
 }
 
 const initialBadPartialWords = [
-  "large language model",
-  "llm",
+  "bert",
+  "embedding",
   "genai",
-  "openai",
+  "language model",
+  "large language model",
+  "llama",
+  "llm",
   "machine learning",
+  "neural network",
+  "ollama",
+  "openai",
 ];
 
-const initialBadWholeWords = ["ai", "llm"];
+const initialBadWholeWords = ["ai", "llm", "rag", "ml"];
 
 const urls = {
   top: "https://hacker-news.firebaseio.com/v0/topstories.json",
@@ -94,7 +100,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    bestStoriesIds?.map(async (id) => {
+    bestStoriesIds?.slice(0, 10).map(async (id) => {
       setStories((previousStories) => ({
         ...previousStories,
         [id]: { id, loading: true },
